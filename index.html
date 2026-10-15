@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Генератор патентных документов — ООО «ИИП-С»</title>
+<script
+  src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"
+  onerror="this.onerror=null;this.src='https://unpkg.com/docx@8.5.0/build/index.umd.js';">
+</script>
+<script
+  src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"
+  onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';">
+</script>
+<style>
+  :root{
+    --navy:#0b1f3a;
+    --navy-2:#15335c;
+    --accent:#d4a33a;
+    --accent-dark:#b8862a;
+    --bg:#f6f7f9;
+    --card:#ffffff;
+    --text:#1c2733;
+    --muted:#5b6b7c;
+    --line:#e4e8ee;
+    --danger:#c0392b;
+    --danger-bg:#fdf3f2;
+    --ok:#1e7a4a;
+    --ok-bg:#e8f5ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 40px;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px;}
+
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    padding:28px 0 30px;
+    margin-bottom:24px;
+  }
+  header h1{font-size:clamp(18px,4.5vw,26px);font-weight:700;margin-bottom:6px;line-height:1.2;}
+  header p{color:#c9d6e4;font-size:13.5px;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px 18px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-size:16px;
+    color:var(--navy);
+    margin-bottom:14px;
+    padding-bottom:10px;
+    border-bottom:2px solid var(--accent);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2 .num{
+    background:var(--accent);
+    color:var(--navy);
+    width:24px;height:24px;
+    border-radius:50%;
+    font-size:13px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;
+    flex:0 0 auto;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+  }
+  .field{display:flex;flex-direction:column;gap:5px;position:relative;}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:500;}
+  .field input, .field select{
+    width:100%;
+    padding:11px 38px 11px 12px;
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    font-size:15px;
+    background:#fbfcfd;
+    transition:border-color .15s,box-shadow .15s,background .15s;
+    font-family:inherit;
+  }
+  .field select{padding-right:12px;}
+  .field input:focus, .field select:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(212,163,58,.15);
+    background:#fff;
+  }
+  .field input.valid{border-color:var(--ok);background:var(--ok-bg);}
+  .field input.invalid{border-color:var(--danger);background:var(--danger-bg);}
+  .field input.valid ~ .status-icon::after{content:"✓";color:var(--ok);}
+  .field input.invalid ~ .status-icon::after{content:"!";color:var(--danger);}
+  .status-icon{
+    position:absolute;
+    right:12px;
+    top:50%;
+    transform:translateY(-50%);
+    pointer-events:none;
+    font-weight:700;
+    font-size:15px;
+    line-height:1;
+  }
+  .field .hint{
+    font-size:11px;
+    color:var(--danger);
+    display:none;
+    line-height:1.3;
+  }
+  .field input.invalid + .status-icon + .hint{display:block;}
+  .field .hint-ok{
+    font-size:11px;
+    color:var(--ok);
+    display:none;
+  }
+  .field input.valid + .status-icon + .hint-ok{display:block;}
+
+  .checkline{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:14px;
+    padding:12px;
+    background:#fffaf0;
+    border:1px solid #f0e2c4;
+    border-radius:9px;
+  }
+  .checkline input{margin-top:2px;flex:0 0 auto;width:18px;height:18px;accent-color:var(--accent-dark);}
+
+  .calc-result{
+    margin-top:14px;
+    background:linear-gradient(135deg,var(--navy),var(--navy-2));
+    color:#fff;
+    border-radius:11px;
+    padding:16px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .calc-result .label{font-size:13px;color:#c9d6e4;}
+  .calc-result .sum{font-size:22px;font-weight:700;color:var(--accent);}
+
+  .fee-breakdown{
+    margin-top:10px;
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.6;
+    padding:10px 12px;
+    background:#f8fafb;
+    border-radius:8px;
+    border:1px solid var(--line);
+  }
+  .fee-breakdown b{color:var(--navy);}
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:var(--accent);
+    color:var(--navy);
+    font-weight:600;
+    font-size:15px;
+    padding:13px 24px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    transition:background .2s,transform .12s,opacity .2s;
+    width:100%;
+    font-family:inherit;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:hover:not(:disabled){background:var(--accent-dark);}
+  .btn:active:not(:disabled){transform:translateY(1px);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.secondary{
+    background:transparent;
+    color:var(--navy);
+    border:1.5px solid var(--line);
+  }
+  .btn.secondary:hover{background:#f0f3f7;border-color:#cfd6de;}
+
+  .actions{display:grid;gap:10px;margin-top:6px;}
+
+  .status{
+    margin-top:12px;
+    font-size:13px;
+    padding:11px 14px;
+    border-radius:9px;
+    display:none;
+  }
+  .status.show{display:block;}
+  .status.ok{background:var(--ok-bg);color:var(--ok);border:1px solid #c4e3d3;}
+  .status.err{background:var(--danger-bg);color:var(--danger);border:1px solid #f2c7c3;}
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    padding:24px 16px 0;
+    line-height:1.6;
+  }
+
+  @media (max-width:520px){
+    .card{padding:16px 14px;}
+    header{padding:22px 0 24px;}
+    .grid{grid-template-columns:1fr;}
+    .field input, .field select{font-size:16px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Генератор патентных документов</h1>
+    <p>ООО «ИИП-С» • Ввод данных один раз — 4 документа DOCX в одном ZIP-архиве + расчёт пошлины</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. ДАННЫЕ ЗАЯВИТЕЛЯ -->
+  <div class="card">
+    <h2><span class="num">1</span> Данные заявителя</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="fio">ФИО полностью *</label>
+        <input id="fio" type="text" placeholder="Иванов Иван Иванович" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint">Укажите ФИО полностью</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field">
+        <label for="birth">Дата рождения *</label>
+        <input id="birth" type="date">
+        <span class="status-icon"></span>
+        <span class="hint">Укажите дату рождения</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field">
+        <label for="passSeries">Паспорт: серия *</label>
+        <input id="passSeries" type="text" placeholder="1234" inputmode="numeric" maxlength="4" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint">4 цифры</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field">
+        <label for="passNumber">Паспорт: номер *</label>
+        <input id="passNumber" type="text" placeholder="567890" inputmode="numeric" maxlength="6" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint">6 цифр</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field">
+        <label for="passWho">Кем выдан *</label>
+        <input id="passWho" type="text" placeholder="ОВД Кировского района г. Москвы" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint">Укажите, кем выдан паспорт</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field">
+        <label for="passDate">Дата выдачи *</label>
+        <input id="passDate" type="date">
+        <span class="status-icon"></span>
+        <span class="hint">Укажите дату выдачи</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field" style="grid-column:1/-1;">
+        <label for="address">Адрес регистрации *</label>
+        <input id="address" type="text" placeholder="г. Москва, ул. Ленина, д. 1, кв. 1" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint">Укажите адрес</span>
+        <span class="hint-ok"></span>
+      </div>
+      <div class="field">
+        <label for="inn">ИНН *</label>
+        <input id="inn" type="text" placeholder="10 или 12 цифр" inputmode="numeric" maxlength="12" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint" id="innHint">ИНН должен содержать 10 или 12 цифр</span>
+        <span class="hint-ok" id="innOk">ИНН корректен</span>
+      </div>
+      <div class="field">
+        <label for="snils">СНИЛС *</label>
+        <input id="snils" type="text" placeholder="12345678901" inputmode="numeric" maxlength="11" autocomplete="off">
+        <span class="status-icon"></span>
+        <span class="hint" id="snilsHint">СНИЛС должен содержать 11 цифр</span>
+        <span class="hint-ok" id="snilsOk">СНИЛС корректен</span>
+      </div>
+    </div>
+
+    <label class="checkline">
+      <input id="consent" type="checkbox">
+      <span>Подтверждаю, что получил(а) письменное согласие субъекта персональных данных на их обработку в соответствии с 152-ФЗ. Данные не сохраняются после формирования документов.</span>
+    </label>
+  </div>
+
+  <!-- 2. РАСЧЁТ ПОШЛИНЫ -->
+  <div class="card">
+    <h2><span class="num">2</span> Расчёт пошлины</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="objType">Тип объекта *</label>
+        <select id="objType">
+          <option value="IZ">Изобретение</option>
+          <option value="PM">Полезная модель</option>
+          <option value="PO">Промышленный образец</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="totalClaims">Всего пунктов формулы</label>
+        <input id="totalClaims" type="number" min="1" value="10">
+      </div>
+      <div class="field">
+        <label for="indepClaims">Независимых пунктов</label>
+        <input id="indepClaims" type="number" min="1" value="1">
+      </div>
+      <div class="field">
+        <label for="category">Категория заявителя (льгота)</label>
+        <select id="category">
+          <option value="full">Полная ставка (без льготы)</option>
+          <option value="single_author">Единственный автор — 75%</option>
+          <option value="veteran">Ветеран боевых действий — 100%</option>
+          <option value="invalid">Инвалид — 90%</option>
+          <option value="pensioner">Пенсионер — 90%</option>
+          <option value="student">Студент — 90%</option>
+        </select>
+      </div>
+    </div>
+    <div class="calc-result">
+      <span class="label">Итоговая пошлина к уплате:</span>
+      <span class="sum" id="feeResult">— ₽</span>
+    </div>
+    <div class="fee-breakdown" id="feeBreakdown"></div>
+  </div>
+
+  <!-- 3. ФОРМИРОВАНИЕ -->
+  <div class="card">
+    <h2><span class="num">3</span> Формирование документов</h2>
+    <div class="actions">
+      <button class="btn" id="btnGenerate" disabled>Сформировать комплект (4 документа)</button>
+      <button class="btn secondary" id="btnClear">Очистить данные</button>
+    </div>
+    <div class="status" id="status"></div>
+    <p style="font-size:12px;color:var(--muted);margin-top:14px;">
+      Формируются 4 документа <b>.docx</b> в одном ZIP-архиве. Персональные данные не сохраняются и не передаются на сервер.
+    </p>
+  </div>
+
+</div>
+
+<footer>
+  © ООО «ИИП-С» • Внутренний инструмент<br>
+  Перед использованием убедитесь в наличии согласия субъекта на обработку ПДн (152-ФЗ)
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  if (typeof window.docx === "undefined" || !window.docx.Document || !window.docx.Packer) {
+    const status = document.getElementById("status");
+    if (status) {
+      status.className = "status err show";
+      status.textContent = "Не удалось загрузить библиотеку DOCX. Проверьте подключение к интернету, отключите блокировщик CDN и обновите страницу.";
+    }
+    const generateButton = document.getElementById("btnGenerate");
+    if (generateButton) generateButton.disabled = true;
+    return;
+  }
+  const docx = window.docx;
+
+  const $ = (id) => document.getElementById(id);
+
+  // ============ СТАВКИ ПОШЛИН ============
+  const RATES = {
+    IZ: { base: 4000, perClaimOver10: 1000, baseExam: 14000, perIndepOver1: 10000, reg: 10000 },
+    PM: { base: 3000, perClaimOver10: 800,  baseExam: 10000, perIndepOver1: 8000,  reg: 8000  },
+    PO: { base: 3000, perClaimOver10: 500,  baseExam: 8000,  perIndepOver1: 5000,  reg: 6000  }
+  };
+
+  // Коэффициенты скидок по категориям
+  const DISCOUNTS = {
+    full:           { rate: 1.00, label: "без льготы" },
+    single_author:  { rate: 0.25, label: "скидка 75% (единственный автор)" },
+    veteran:        { rate: 0.00, label: "полное освобождение (ветеран боевых действий)" },
+    invalid:        { rate: 0.10, label: "скидка 90% (инвалид)" },
+    pensioner:      { rate: 0.10, label: "скидка 90% (пенсионер)" },
+    student:        { rate: 0.10, label: "скидка 90% (студент)" }
+  };
+
+  function calcFeeDetailed(){
+    const obj = $("objType").value;
+    const total = Math.max(1, parseInt($("totalClaims").value) || 1);
+    const indep = Math.max(1, parseInt($("indepClaims").value) || 1);
+    const cat = $("category").value;
+    const r = RATES[obj];
+    const disc = DISCOUNTS[cat];
+
+    let sum = r.base + r.baseExam + r.reg;
+    const baseSum = sum;
+    let extraClaims = 0;
+    let extraIndep = 0;
+
+    if (total > 10) { extraClaims = (total - 10) * r.perClaimOver10; sum += extraClaims; }
+    if (indep > 1)  { extraIndep  = (indep - 1) * r.perIndepOver1;  sum += extraIndep; }
+
+    const fullSum = sum;
+    const finalSum = Math.round(sum * disc.rate);
+
+    return {
+      baseSum: baseSum,
+      extraClaims: extraClaims,
+      extraIndep: extraIndep,
+      fullSum: fullSum,
+      finalSum: finalSum,
+      discountLabel: disc.label,
+      discountRate: disc.rate,
+      objType: obj,
+      totalClaims: total,
+      indepClaims: indep
+    };
+  }
+
+  function updateFee(){
+    const d = calcFeeDetailed();
+    $("feeResult").textContent = d.finalSum.toLocaleString("ru-RU") + " ₽";
+
+    let breakdown = "Базовые этапы (формальная + экспертиза + регистрация): <b>" + d.baseSum.toLocaleString("ru-RU") + " ₽</b>";
+    if (d.extraClaims > 0) breakdown += "<br>Доплата за пункты свыше 10: <b>" + d.extraClaims.toLocaleString("ru-RU") + " ₽</b>";
+    if (d.extraIndep > 0) breakdown += "<br>Доплата за независимые пункты свыше 1: <b>" + d.extraIndep.toLocaleString("ru-RU") + " ₽</b>";
+    breakdown += "<br>Полная сумма: <b>" + d.fullSum.toLocaleString("ru-RU") + " ₽</b>";
+    if (d.discountRate < 1) breakdown += "<br>Льгота: <b>" + d.discountLabel + "</b>";
+    $("feeBreakdown").innerHTML = breakdown;
+  }
+
+  // ============ ВАЛИДАЦИЯ ============
+  function digitsOnly(s){ return (s || "").replace(/\D/g, ""); }
+
+  function validateINN(inn){
+    const d = digitsOnly(inn);
+    if (d.length === 10){
+      const weights = [2,4,10,3,5,9,4,6,8];
+      let sum = 0;
+      for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * weights[i];
+      const control = (sum % 11) % 10;
+      return control === parseInt(d[9]);
+    }
+    if (d.length === 12){
+      const w1 = [7,2,4,10,3,5,9,4,6,8];
+      const w2 = [3,7,2,4,10,3,5,9,4,6,8];
+      let s1 = 0, s2 = 0;
+      for (let i = 0; i < 10; i++) s1 += parseInt(d[i]) * w1[i];
+      for (let i = 0; i < 11; i++) s2 += parseInt(d[i]) * w2[i];
+      const c1 = (s1 % 11) % 10;
+      const c2 = (s2 % 11) % 10;
+      return c1 === parseInt(d[10]) && c2 === parseInt(d[11]);
+    }
+    return false;
+  }
+
+  function validateSNILS(snils){
+    const d = digitsOnly(snils);
+    if (d.length !== 11) return false;
+    const num = d.slice(0, 9);
+    const control = parseInt(d.slice(9, 11), 10);
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(num[i]) * (9 - i);
+    let expected;
+    if (sum < 100) expected = sum;
+    else if (sum === 100 || sum === 101) expected = 0;
+    else expected = (sum % 101) % 100;
+    return expected === control;
+  }
+
+  function validate(){
+    let ok = true;
+    const checks = [
+      ["fio",       v => v.trim().length >= 3],
+      ["birth",     v => /^\d{4}-\d{2}-\d{2}$/.test(v)],
+      ["passSeries",v => digitsOnly(v).length === 4],
+      ["passNumber",v => digitsOnly(v).length === 6],
+      ["passWho",   v => v.trim().length >= 3],
+      ["passDate",  v => /^\d{4}-\d{2}-\d{2}$/.test(v)],
+      ["address",   v => v.trim().length >= 5],
+      ["inn",       v => validateINN(v)],
+      ["snils",     v => validateSNILS(v)],
+    ];
+
+    checks.forEach(function(item){
+      const el = $(item[0]);
+      const valid = item[1](el.value);
+      el.classList.toggle("invalid", !valid && el.value.length > 0);
+      el.classList.toggle("valid", valid);
+      if (!valid) ok = false;
+    });
+
+    const innEl = $("inn");
+    const snilsEl = $("snils");
+    if (innEl.value.length > 0 && !validateINN(innEl.value)) {
+      $("innHint").textContent = "Неверный ИНН: проверьте контрольную сумму";
+    } else {
+      $("innHint").textContent = "ИНН должен содержать 10 или 12 цифр";
+    }
+    if (snilsEl.value.length > 0 && !validateSNILS(snilsEl.value)) {
+      $("snilsHint").textContent = "Неверный СНИЛС: проверьте контрольную сумму";
+    } else {
+      $("snilsHint").textContent = "СНИЛС должен содержать 11 цифр";
+    }
+
+    if (!$("consent").checked) ok = false;
+    return ok;
+  }
+
+  function refreshBtn(){
+    $("btnGenerate").disabled = !validate();
+  }
+
+  // ============ ГЕНЕРАЦИЯ DOCX ============
+  function makeDoc(title, paragraphs){
+    const Document = docx.Document;
+    const Packer = docx.Packer;
+    const Paragraph = docx.Paragraph;
+    const TextRun = docx.TextRun;
+    const AlignmentType = docx.AlignmentType;
+
+    const children = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 },
+        children: [ new TextRun({ text: title, bold: true, size: 28 }) ]
+      })
+    ];
+    paragraphs.forEach(function(txt){
+      children.push(new Paragraph({
+        spacing: { after: 160 },
+        children: [ new TextRun({ text: txt, size: 24 }) ]
+      }));
+    });
+    const doc = new Document({ sections: [{ children: children }] });
+    return Packer.toBlob(doc);
+  }
+
+  function download(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
+  }
+
+  function buildData(){
+    const d = {
+      fio: $("fio").value.trim(),
+      birth: formatDate($("birth").value),
+      passSeries: digitsOnly($("passSeries").value),
+      passNumber: digitsOnly($("passNumber").value),
+      passWho: $("passWho").value.trim(),
+      passDate: formatDate($("passDate").value),
+      address: $("address").value.trim(),
+      inn: digitsOnly($("inn").value),
+      snils: digitsOnly($("snils").value),
+      fee: calcFeeDetailed().finalSum
+    };
+    d.passport = d.passSeries + " " + d.passNumber;
+    return d;
+  }
+
+  async function generate(){
+    const status = $("status");
+    status.className = "status";
+    status.textContent = "";
+
+    if (!validate()){
+      status.className = "status err show";
+      status.textContent = "Проверьте, пожалуйста, отмеченные поля и подтвердите согласие на обработку ПДн.";
+      return;
+    }
+
+    const btn = $("btnGenerate");
+    btn.disabled = true;
+    btn.textContent = "Формируем документы…";
+
+    try{
+      const d = buildData();
+      const today = new Date().toLocaleDateString("ru-RU");
+      const shortName = d.fio.split(" ")[0] || "заявитель";
+
+      const docs = [
+        {
+          name: "Доверенность_" + shortName + ".docx",
+          title: "ДОВЕРЕННОСТЬ на патентного поверенного",
+          body: [
+            "Город Москва, " + today,
+            "Я, " + d.fio + ", " + d.birth + " года рождения, паспорт " + d.passport + ", выдан " + d.passWho + ", дата выдачи " + d.passDate + ", зарегистрированный(ая) по адресу: " + d.address + ", ИНН " + d.inn + ", СНИЛС " + d.snils + ",",
+            "настоящей доверенностью уполномочиваю патентного поверенного ООО «ИИП-С» представлять мои интересы в Федеральной службе по интеллектуальной собственности (Роспатент) по вопросам подачи и рассмотрения заявки на изобретение, включая ведение делопроизводства, подачу ходатайств, получение документов.",
+            "Доверенность выдана сроком на три года без права передоверия.",
+            "Подпись: ______________________ / " + d.fio + " /"
+          ]
+        },
+        {
+          name: "Реквизиты_пошлины_" + shortName + ".docx",
+          title: "РЕКВИЗИТЫ ДЛЯ ОПЛАТЫ ПОШЛИНЫ",
+          body: [
+            "Плательщик: " + d.fio,
+            "ИНН плательщика: " + d.inn,
+            "Адрес: " + d.address,
+            "",
+            "Назначение платежа: патентная пошлина за рассмотрение заявки на изобретение",
+            "Сумма к уплате: " + d.fee.toLocaleString("ru-RU") + " ₽",
+            "",
+            "Реквизиты получателя — согласно актуальным реквизитам Роспатента / ФИПС.",
+            "Дата формирования: " + today
+          ]
+        },
+        {
+          name: "Заявление_" + shortName + ".docx",
+          title: "ЗАЯВЛЕНИЕ",
+          body: [
+            "В Федеральную службу по интеллектуальной собственности (Роспатент)",
+            "от " + d.fio + ", ИНН " + d.inn + ", адрес: " + d.address,
+            "",
+            "Прошу принять к рассмотрению заявку на выдачу патента на изобретение.",
+            "Все необходимые документы прилагаются.",
+            "",
+            "Дата: " + today,
+            "Подпись: ______________________ / " + d.fio + " /"
+          ]
+        },
+        {
+          name: "Ходатайство_о_снижении_пошлины_" + shortName + ".docx",
+          title: "ХОДАТАЙСТВО о снижении размера пошлины",
+          body: [
+            "В Федеральную службу по интеллектуальной собственности (Роспатент)",
+            "от " + d.fio + ", ИНН " + d.inn + ", СНИЛС " + d.snils,
+            "",
+            "Прошу рассмотреть вопрос о снижении размера патентной пошлины в соответствии с действующим законодательством, с учётом категории заявителя.",
+            "Итоговая сумма пошлины с учётом льготы: " + d.fee.toLocaleString("ru-RU") + " ₽.",
+            "",
+            "Дата: " + today,
+            "Подпись: ______________________ / " + d.fio + " /"
+          ]
+        }
+      ];
+
+      if (typeof window.JSZip === "undefined") {
+        throw new Error("Библиотека ZIP не загружена");
+      }
+      const zip = new window.JSZip();
+      for (let i = 0; i < docs.length; i++){
+        const blob = await makeDoc(docs[i].title, docs[i].body);
+        zip.file(docs[i].name, blob);
+      }
+      const archive = await zip.generateAsync({
+        type: "blob",
+        mimeType: "application/zip",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
+      download(archive, "Комплект_патентных_документов_" + shortName + ".zip");
+
+      status.className = "status ok show";
+      status.textContent = "Готово: сформированы 4 DOCX-файла и собраны в один ZIP-архив. Проверьте папку загрузок. Данные не сохранялись.";
+    } catch(e){
+      console.error(e);
+      status.className = "status err show";
+      status.textContent = "Не удалось сформировать документы. Обновите страницу и попробуйте снова.";
+    } finally {
+      btn.textContent = "Сформировать комплект (4 документа)";
+      refreshBtn();
+    }
+  }
+
+  function clearAll(){
+    ["fio","birth","passSeries","passNumber","passWho","passDate","address","inn","snils"]
+      .forEach(function(id){
+        $(id).value = "";
+        $(id).classList.remove("invalid","valid");
+      });
+    $("consent").checked = false;
+    $("totalClaims").value = 10;
+    $("indepClaims").value = 1;
+    $("objType").value = "IZ";
+    $("category").value = "full";
+    $("status").className = "status";
+    $("status").textContent = "";
+    updateFee();
+    refreshBtn();
+  }
+
+  // ============ СОБЫТИЯ ============
+  const watched = ["fio","birth","passSeries","passNumber","passWho","passDate","address","inn","snils"];
+  watched.forEach(function(id){
+    $(id).addEventListener("input", function(){ validate(); refreshBtn(); });
+    $(id).addEventListener("blur",  function(){ validate(); refreshBtn(); });
+  });
+
+  ["objType","totalClaims","indepClaims","category"].forEach(function(id){
+    $(id).addEventListener("input", updateFee);
+    $(id).addEventListener("change", updateFee);
+  });
+
+  $("consent").addEventListener("change", refreshBtn);
+  $("btnGenerate").addEventListener("click", generate);
+  $("btnClear").addEventListener("click", clearAll);
+
+  updateFee();
+  refreshBtn();
+
+})();
+</script>
+
+</body>
+</html>
